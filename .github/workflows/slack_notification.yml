@@ -15,7 +15,23 @@ jobs:
         with:
           payload: |
             {
-              "text": "New PR with 'tests-e2e' label: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/pull/${{ github.event.pull_request.number }}"
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "New PR#${{ github.event.pull_request.number }} with 'tests-e2e' label has been created."
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "<${{ github.event.pull_request.html_url }}|View PR>"
+                  }
+                }
+              ]
+
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

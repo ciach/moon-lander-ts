@@ -13,11 +13,9 @@ jobs:
       - name: Send Slack Notification
         uses: slackapi/slack-github-action@v1.24.0
         with:
-          status: custom
-          fields: repo,message
-          custom_payload: |
+          payload: |
             {
-              "text": "New PR with 'tests' label: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/pull/${{ github.event.pull_request.number }}"
+              "text": "New PR with 'tests-e2e' label: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/pull/${{ github.event.pull_request.number }}"
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

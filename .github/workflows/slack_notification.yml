@@ -1,0 +1,24 @@
+name: Notify Slack on PR with tests label
+
+on:
+  pull_request:
+    types:
+      - labeled
+
+jobs:
+  notify_slack:
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'tests-e2e')
+    steps:
+      - name: Send Slack Notification
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          status: custom
+          fields: repo,message
+          custom_payload: |
+            {
+              "text": "New PR with 'tests' label: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/pull/${{ github.event.pull_request.number }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK

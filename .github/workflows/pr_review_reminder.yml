@@ -16,7 +16,7 @@ jobs:
       - name: Construct Slack message
         id: construct_msg
         run: |
-          prs=$(cat old_prs.json)
+          prs=$(stat -c %s old_prs.json)
           echo "::set-output name=payload::{\"text\": \"PRs open for more than 1 day: $prs\"}"
 
       - name: Send Slack Reminder

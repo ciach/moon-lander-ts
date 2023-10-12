@@ -11,12 +11,12 @@ jobs:
         run: |
           curl -H "Authorization: token ${{ secrets.TOKEN }}" \
                -s "https://api.github.com/repos/${{ github.repository }}/pulls?state=open" | \
-               jq '[.[] | select(.created_at >= (now | . - (2*24*60*60)) and .created_at < (now)) | .html_url]' > old_prs.json
+               jq '[.[] | .html_url]' > old_prs.json
 
       - name: Construct Slack message
         id: construct_msg
         run: |
-          prs=$(stat -c %s old_prs.json)
+          prs=$(cat old_prs.json)
           echo "::set-output name=payload::{\"text\": \"PRs open for more than 1 day: $prs\"}"
 
       - name: Send Slack Reminder

@@ -1,8 +1,6 @@
 name: Remind Slack for old PRs
 
-on:
-  schedule:
-    - cron: "0 0 * * *" # This will run daily at midnight
+on: [push]
 
 jobs:
   remind_slack:
@@ -14,14 +12,18 @@ jobs:
           curl -H "Authorization: token ${{ secrets.TOKEN }}" \
                -s "https://api.github.com/repos/${{ github.repository }}/pulls?state=open" | \
                jq '[.[] | select(.created_at < (now | . - (1*24*60*60)) and any(.labels[]; .name == "tests-e2e")) | .html_url]' > old_prs.json
+
+      - name: Construct Slack message
+        id: construct_msg
+        run: |
+          prs=$(cat old_prs.json)
+          echo "::set-output name=payload::{\"text\": \"PRs open for more than 1 day: $prs\"}"
+
       - name: Send Slack Reminder
         if: steps.check_prs.outputs.old_prs != '[]'
         uses: slackapi/slack-github-action@v1.24.0
         with:
-          payload: |
-            {
-              "text": "PRs open for more than 2 weeks: $(cat old_prs.json)"
-            }
+          payload: ${{ steps.construct_msg.outputs.payload }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK

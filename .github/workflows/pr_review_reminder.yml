@@ -11,7 +11,7 @@ jobs:
         run: |
           curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
           -s "https://api.github.com/repos/${{ github.repository }}/pulls?state=open&labels=tests-e2e" | \
-          jq '[.[] | select(.created_at < (now | . - (1*24*60*60))) | .html_url]' > old_prs.json
+          jq '[.[] | select(.created_at < (now | . - (2*24*60*60))) | .html_url]' > old_prs.json
 
       - name: Construct Slack message
         id: construct_msg

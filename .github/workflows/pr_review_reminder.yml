@@ -20,9 +20,14 @@ jobs:
       - name: Construct Slack message
         id: construct_msg
         run: |
-          prs=$(jq -c . < recent_prs.json)
-          payload=$(jq -nc --arg prs "$prs" '{"text": ("PRs with label \'tests-e2e\' from the last 24 hours: " + $prs)}')
-          echo "::set-output name=payload::$payload"
+          prs_list=""
+          while read -r pr; do
+            url=$(echo "$pr" | jq -r '.url')
+            title=$(echo "$pr" | jq -r '.title')
+            prs_list="$prs_list\n$title: $url"
+          done < <(jq -c '.[]' recent_prs.json)
+
+          echo "::set-output name=payload::{\"text\": \"PRs with label 'tests-e2e' from the last 24 hours:$prs_list\"}"
 
       - name: Send Slack Reminder
         if: steps.construct_msg.outputs.payload != '[]'

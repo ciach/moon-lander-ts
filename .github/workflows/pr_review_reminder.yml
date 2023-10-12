@@ -15,11 +15,12 @@ jobs:
       - name: Construct Slack message
         id: construct_msg
         run: |
-          prs=$(cat old_prs.json)
-          echo "::set-output name=payload::{\"text\": \"PRs open for more than 1 day: $prs\"}"
+          prs=$(jq -c . < old_prs.json)
+          payload=$(jq -nc --arg prs "$prs" '{"text": ("PRs open for more than 1 day: " + $prs)}')
+          echo "::set-output name=payload::$payload"
 
       - name: Send Slack Reminder
-        if: steps.check_prs.outputs.old_prs != '[]'
+        if: steps.check_prs.outputs.payload != '[]'
         uses: slackapi/slack-github-action@v1.24.0
         with:
           payload: ${{ steps.construct_msg.outputs.payload }}

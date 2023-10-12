@@ -9,8 +9,9 @@ jobs:
       - name: Check old PRs
         id: check_prs
         run: |
-          date=$(date -d "2 days ago" +%Y-%m-%d)
-          query="type:pr+created:<$date+label:tests-e2e+repo:${{ github.repository }}+state:open"
+          start_date=$(date -d "2 days ago" +%Y-%m-%d)
+          end_date=$(date +%Y-%m-%d)
+          query="type:pr+created:$start_date..$end_date+label:tests-e2e+repo:${{ github.repository }}+state:open"
 
           curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
               -s "https://api.github.com/search/issues?q=$query" | \

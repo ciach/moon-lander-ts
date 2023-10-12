@@ -11,19 +11,17 @@ jobs:
         run: |
           curl -H "Authorization: token ${{ secrets.TOKEN }}" \
                -s "https://api.github.com/repos/${{ github.repository }}/pulls?state=open" | \
-               jq '[.[] | select(any(.labels[]; .name == "tests-e2e")) | .html_url]' > old_prs.json
-
-      - name: Construct Slack message
-        id: construct_msg
-        run: |
-          prs=$(cat old_prs.json)
-          echo "::set-output name=payload::{\"text\": \"PRs open for more than 1 day: $prs\"}"
-
+          jq '[.[] | select(.created_at < (now | . - (1*24*60*60)) and any(.labels[]; .name == "tests-e2e")) | .html_url]' > old_prs.json
+          echo "PRs to notify about:"
+          cat old_prs.json
       - name: Send Slack Reminder
         if: steps.check_prs.outputs.old_prs != '[]'
         uses: slackapi/slack-github-action@v1.24.0
         with:
-          payload: ${{ steps.construct_msg.outputs.payload }}
+          payload: |
+            {
+              "text": "PRs with label 'tests-e2e' open for more than 1 day: $(echo $(cat old_prs.json) | jq -c .)"
+            }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK

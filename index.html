@@ -15,5 +15,169 @@
 <body>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
     <script src="game.js"></script>
+    <p class="test">Invoking React components from your Ember apps
+      #
+      react
+      #
+      ember
+      #
+      javascript
+      #
+      webpack
+      In this post, we are going to take a look at how to invoke React components from an Ember.js application. Before diving into the topic let's have a quick intro about both these frameworks (or library) and look at why we want to integrate React into an Ember codebase first.
+      
+      Ember
+      Ember is a framework for ambitious web developers. It is a productive, battle-tested JavaScript framework for building modern web applications. It includes everything you need to build rich UIs that work on any device. It has been around for more than 10 years and is still preferred and used by a lot of companies.
+      
+      React
+      React, of course, doesn't really need an introduction, since it is the undisputed leader in the JavaScript Framework space. It is a JavaScript library for building user interfaces. It is declarative and component based. With React, you can build encapsulated components that manage their own state, then compose them to make complex UIs.
+      
+      Why?
+      There could be many reasons to integrate React into an Ember.js application from performance, maintainability, technology heterogeneity, organizational reasons, developer availability to business priorities. My fellow Emberanos won't fully agree with me on these various reasons. It's okay. Yet I wanted to share my knowledge on some recent experiments I have done to help a larger community of people and to those who are looking to migrate from Ember to React.
+      
+      It is important to remember that Ember is not a bad framework. And Ember is still my first love ❤️ when it comes to JavaScript Frameworks and I am very grateful to the framework and the community since it has been a tremendous help in shaping my front-end career and building a lot of tools. You really can't compare Ember with React in absolute terms. Because it's apples and oranges.
+      
+      Setting up the Monorepo
+      We are going to setup a monorepo for this post. That gives us a clear advantage of keeping the React components and the Ember app separately, still within a single repository. We are going to use pnpm workspaces for the task at hand.
+      |-app
+      |--|-<Ember app>
+      |-some-react-lib
+      |--hello-world.jsx
+      |--package.json
+      |-README.md
+      |-pnpm-lock.yaml
+      |-pnpm-workspace.yaml
+      This is how I setup the monorepo structure using the command line.
+      mkdir ember-react-example
+      cd ember-react-example
+      touch README.md pnpm-workspace.yaml
+      mkdir app some-react-lib
+      cd app
+      degit ember-cli/ember-new-output#v4.10.0
+      cd ..
+      cd some-react-lib
+      touch hello-world.jsx package.json
+      Here I am using degit to bootstrap our Ember app since the ember-cli doesn't allow you to create a new Ember app in the name of app.
+      
+      Our pnpm-workspace.yaml file should look like something like this, indicating that the workspace contains two packages one Ember app and other React component library.
+      packages:
+        - app
+        - some-react-lib
+      Compiling React components with Ember
+      Now we will see how to configure Ember build pipeline with ember-auto-import to tweak the Webpack builder underneath to compile JSX. Before that we need to add the appropriate dependencies for compiling React components like react and react-dom itself and other babel plugins for React.
+      
+      So from your Ember app root folder, run the following command to add the dependencies.
+      pnpm add -D react react-dom babel-loader @babel/preset-react
+      This is how the modified ember-cli-build.js file inside the Ember app will look like. We are configuring the webpack loader to handle all the JSX from the React package some-react-lib inside the monorepo.
+      'use strict';
+      
+      const EmberApp = require('ember-cli/lib/broccoli/ember-app');
+      
+      module.exports = function (defaults) {
+        let app = new EmberApp(defaults, {
+          autoImport: {
+            webpack: {
+              module: {
+                rules: [
+                  {
+                    test: /some-react-lib\/.*\.jsx/,
+                    use: {
+                      loader: 'babel-loader',
+                      options: {
+                        presets: [['@babel/preset-react', { runtime: 'automatic' }]],
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          }
+        });
+      
+        return app.toTree();
+      };
+      Rendering components via Modifiers
+      Modifiers are a basic primitive for interacting with the DOM in Ember. For example, Ember ships with a built-in modifier, {{on}}:
+      <button {{on "click" @onClick}}>
+        {{@text}}
+      </button>
+      All modifiers get applied to elements directly this way (if you see a similar value that isn't in an element, it is probably a helper instead), and they are passed the element when applying their effects.
+      
+      Conceptually, modifiers take tracked, derived state, and turn it into some sort of side effect related in some way to the DOM element they are applied to.
+      
+      To create our modifiers, we are going to use the ember-modifier addon inside our Ember app. Let's first install our addon.
+      ember install ember-modifier
+      Let's create a class-based modifier to render our React components.
+      ember g modifier react --class
+      This is the code for the newly created modifier. Basically the modifier is trying to create a new Root element for the React component and then it creates a new instance of the React component and render it inside the element provided by the modifier. The registerDestructor function available in @ember/destroyable will help you to tear down the functionality added in the modifier, when the modifier is removed.
+      import Modifier from 'ember-modifier';
+      import { createRoot } from 'react-dom/client';
+      import { createElement } from 'react';
+      import { registerDestructor } from '@ember/destroyable';
+      
+      export default class ReactModifier extends Modifier {
+        modify(element, [reactComponent], props) {
+          if (!this.root) {
+            this.root = createRoot(element);
+            registerDestructor(this, () => this.root.unmount());
+          }
+          this.root.render(createElement(reactComponent, { ...props }));
+        }
+      }
+      React Component
+      Our React component is a simple component showing a message that can be toggled using the actions of an Ember component.
+      This is the code for our React component.
+      export function HelloWorld({ message, onClick }) {
+        return <div>
+          <button onClick={onClick}>Toggle</button>
+          <div>you said: {message}</div>
+        </div>;
+      }
+      Creating a Ember wrapper component
+      Let's create our wrapper component for which we need a Glimmer component with class
+      ember g component example -gc
+      Ember component.js
+      The code for the Ember wrapper component is simple. First we are importing our React component from the shared library in our monorepo and assign it to a component property called theReactComponent which we will be using the main argument to our modifier. Then we have a tracked property message and an action toggle which are both props to the React component.
+      import { HelloWorld } from 'some-react-lib/hello-world.jsx';
+      import Component from '@glimmer/component';
+      import { tracked } from '@glimmer/tracking';
+      import { action } from '@ember/object';
+      
+      export default class extends Component {
+        theReactComponent = HelloWorld;
+      
+        @tracked message = 'hello';
+      
+        @action toggle() { 
+          if (this.message === 'hello') {
+            this.message = 'goodbye';
+          } else {
+            this.message = 'hello';
+          }
+        }
+      }
+      Ember Component template
+      And this is how we use the react modifier on a DOM element to render our React component and pass our data from Ember via the props.
+      <div {{react this.theReactComponent message=this.message onClick=this.toggle}} />
+      And this is how the Ember app looks like. Basically we are toggling a message with a button. Both the message data and the message handler functions are passed from Ember to React component via the modifier props.
+      
+      GIFImage description
+      
+      Pros & Cons
+      Having used React components inside an Ember app, let's discuss about the pros and cons of using the above mentioned approach to integrate React into Ember.js applications.
+      
+      Pros
+      Incrementally migrate an Ember codebase to React
+      Having a monorepo of both Ember and React components
+      Easy to consume the components, passing data via props and sharing the state with Modifier syntax
+      Clean and simple approach
+      Cons
+      Need Ember wrapper components for each React Components
+      Hot module reloading won't work if you change code in React components since it is a separate dependency via npm
+      Framework footprint of extra 40 KB (React runtime) in your production bundles
+      Sample repo
+      The code for this post is hosted in Github here. A Huge Thanks to Edward Faulkner for making it possible. There is also an Embroider version of this approach using embroider to build and compile React components with route-wise code splitting.
+      
+      Please take a look at the Github repo and let me know your feedback, queries in the comments section. If you feel there are more pros and cons to be added here, please do let us know also.</p>
 </body>
 </html>

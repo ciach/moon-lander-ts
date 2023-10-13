@@ -1,0 +1,43 @@
+name: Label PR based on size
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  labeler:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch PR details
+        id: pr_details
+        run: |
+          PR_DETAILS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+               "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}")
+          ADDITIONS=$(echo $PR_DETAILS | jq .additions)
+          DELETIONS=$(echo $PR_DETAILS | jq .deletions)
+          TOTAL_CHANGES=$(( ADDITIONS + DELETIONS ))
+          echo "::set-output name=total_changes::$TOTAL_CHANGES"
+
+      - name: Label PR
+        run: |
+          TOTAL_CHANGES=${{ steps.pr_details.outputs.total_changes }}
+          LABEL=""
+
+          if [ $TOTAL_CHANGES -le 10 ]; then
+            LABEL="size/XS"
+          elif [ $TOTAL_CHANGES -le 50 ]; then
+            LABEL="size/S"
+          elif [ $TOTAL_CHANGES -le 100 ]; then
+            LABEL="size/M"
+          elif [ $TOTAL_CHANGES -le 500 ]; then
+            LABEL="size/L"
+          elif [ $TOTAL_CHANGES -le 1000 ]; then
+            LABEL="size/XL"
+          else
+            LABEL="size/XXL"
+          fi
+
+          curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+               -H "Accept: application/vnd.github.v3+json" \
+               "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" \
+               -d "{\"labels\":[\"$LABEL\"]}"

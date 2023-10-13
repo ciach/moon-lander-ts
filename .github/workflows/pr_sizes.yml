@@ -11,12 +11,12 @@ jobs:
       - name: Fetch PR details
         id: pr_details
         run: |
-          PR_DETAILS=$(curl -s -H "Authorization: Bearer ${{ secrets.TOKEN }}" \
+          PR_DETAILS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}")
           ADDITIONS=$(echo $PR_DETAILS | jq .additions)
           DELETIONS=$(echo $PR_DETAILS | jq .deletions)
           TOTAL_CHANGES=$(( ADDITIONS + DELETIONS ))
-          echo "::set-output name=total_changes::$TOTAL_CHANGES"
+          echo "total_changes=$TOTAL_CHANGES" >> $GITHUB_OUTPUT
 
       - name: Label PR
         run: |

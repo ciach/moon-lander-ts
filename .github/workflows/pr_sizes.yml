@@ -40,5 +40,5 @@ jobs:
           curl -L -X PUT \
                -H "Accept: application/vnd.github+json" \
                -H "Authorization: Bearer ${{ secrets.TOKEN }}" \
-               "https://api.github.com/repos/ciach/moon-lander-ts/issues/${{ github.event.pull_request.number }}/labels" \
+               "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" \
                -d "{\"labels\":[\"$LABEL\"]}"

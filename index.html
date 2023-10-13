@@ -15,5 +15,37 @@
 <body>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
     <script src="game.js"></script>
+    <div class="test">24-July-2023 Update: Our telemetry shows significant usage of these commands so we have decided to postpone the removal. To learn more, visit the latest changelog post.
+
+        To avoid untrusted logged data to use save-stateand set-output workflow commands without the intention of the workflow author we have introduced a new set of environment files to manage state and output.
+        
+        Starting today runner version 2.298.2 will begin to warn you if you use the save-state or set-output commands via stdout. We are monitoring telemetry for the usage of these commands and plan to fully disable them on 31st May 2023. Starting 1st June 2023 workflows using save-state or set-output commands via stdout will fail with an error. Our telemetry shows significant usage of these commands. Given the number of impacted customers we are postponing the removal.
+        
+        Patching your actions and workflows
+        If you are using self-hosted runners make sure they are updated to version 2.297.0 or greater.
+        
+        Action authors who are using the toolkit should update the @actions/core package to v1.10.0 or greater to get the updated saveState and setOutput functions.
+        
+        Action and workflow authors who are using save-state or set-output via stdout should update to use the new environment files.
+        
+        Examples
+        A workflow using save-state or set-output like the following
+        
+        - name: Save state
+        run: echo "::save-state name={name}::{value}"
+        
+        - name: Set output
+        run: echo "::set-output name={name}::{value}"
+        should be updated to write to the new GITHUB_STATE and GITHUB_OUTPUT environment files:
+        
+        - name: Save state
+        run: echo "{name}={value}" >> $GITHUB_STATE
+        
+        - name: Set output
+        run: echo "{name}={value}" >> $GITHUB_OUTPUT
+        Packages: Consolidated owner and admin role
+        October 10, 2022
+        packages
+        </div>
 </body>
 </html>
